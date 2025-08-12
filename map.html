@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>아이나비 지도</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <style>
+    html, body, #map { width:100%; height:100%; margin:0; padding:0; background:#e0e0e0; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script>
+    function initMap() {
+      if (!window.inavi || !inavi.maps) {
+        console.error('SDK 미로드: inavi 네임스페이스가 없습니다.');
+        return;
+      }
+      const center = { lat: 37.4021, lng: 127.1087 };
+      new inavi.maps.Map(document.getElementById('map'), {
+        center,
+        zoom: 15,
+        zoomControl: true,
+        gestureHandling: 'greedy'
+      });
+    }
+
+    (function loadInaviSdk(){
+      const s = document.createElement('script');
+      // 앱 키를 실제 값으로 교체하세요. 필요한 libraries는 문서에 맞게 추가(예: services 등).
+      const base = 'https://mapsapi.inavisys.com/sdk/js';
+      const qs = 'appKey=390a1401a193cf7206aa641d810097f0a8605057&libraries=services&_t=' + Date.now(); // 캐시 버스터
+      s.src = base + '?' + qs;
+      s.async = true;
+      s.onload = initMap;
+      s.onerror = () => console.error('SDK 로드 실패. URL/도메인 허용/네트워크를 확인하세요.');
+      document.head.appendChild(s);
+    })();
+  </script>
+</body>
+</html>
