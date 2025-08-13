@@ -5,119 +5,59 @@
   <title>아이나비 지도</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <style>
-    html, body, #map_canvas { width:100%; height:100%; margin:0; padding:0; background:#e0e0e0; } /* id를 map_canvas로 변경 */
+    /* 지도 컨테이너의 id가 "map" -> "map_canvas"로 변경되었으므로 스타일도 변경 */
+    html, body, #map_canvas { width:100%; height:100%; margin:0; padding:0; background:#e0e0e0; }
   </style>
 </head>
 <body>
-  <div id="map_canvas"></div> <!-- id를 map_canvas로 변경 (기존 Unity 코드와의 일관성을 위해) -->
+  <!-- 지도 컨테이너의 id가 "map" -> "map_canvas"로 변경되었으므로 HTML도 변경 -->
+  <div id="map_canvas"></div> 
 
   <script>
-    // 전역 변수로 지도 객체와 사용자 마커 객체를 선언
-    // 이렇게 해야 Unity에서 JavaScript 함수를 통해 이 객체들을 제어할 수 있습니다.
-    var map; // 지도 객체
-    var userLocationMarker = null; // 사용자 위치 마커 객체
+    // 전역 변수로 지도 객체 선언 (Unity에서 제어할 수 있도록)
+    var map; 
 
-    // ★★★ 필수 ★★★ Unity (UniWebView)에서 JavaScript로 메시지를 보낼 때 호출할 콜백 함수
-    // SDK 로드 URL의 `callback=initMap`과 이름이 같으므로 주의해서 관리해야 합니다.
-    // 이 함수 안에서 실제 지도 초기화 로직을 호출하거나, Unity의 호출을 기다리게 할 수 있습니다.
+    // 아이나비 지도 SDK 로드 시 `callback=initMap`에 의해 자동으로 호출되는 함수
     function initMap() {
-        console.log("map.html: initMap() 콜백 함수 호출됨 (SDK 로드 완료)");
-        // SDK 로드가 완료되었음을 Unity에 알립니다.
-        // 이 메시지를 받은 Unity는 MapWebViewManager.cs의 initializeMap 함수를 호출합니다.
+        console.log("map.html: initMap() 콜백 함수 호출됨 (SDK 로드 완료).");
         uniwebview.sendMessage("MapHtmlLoaded?data=InaviSDK_Loaded");
     }
 
-    // ★★★ Unity에서 호출될 메인 지도 초기화 함수 ★★★
-    // Unity의 MapWebViewManager.cs에서 EvaluateJavaScript를 통해 호출될 함수입니다.
-    // 이 함수는 AppKey, 초기 위도, 경도, 줌 레벨을 매개변수로 받습니다.
+    // ★★★ Unity에서 호출될 지도를 초기화하고 중심을 설정하는 함수 ★★★
+    // Unity의 MapWebViewManager.cs에서 EvaluateJavaScript를 통해 호출됩니다.
+    // initialLat, initialLon을 받아 지도의 초기 중심에 반영합니다.
     function initializeMap(appKey, initialLat, initialLon, initialZoom) {
         console.log("map.html: initializeMap() Unity로부터 호출됨. AppKey:", appKey, "위도:", initialLat, "경도:", initialLon, "줌:", initialZoom);
 
         // 아이나비 지도 객체 생성 (전역 변수 map에 할당)
         map = new inavi.maps.Map({
-            center: new inavi.maps.LatLng(parseFloat(initialLat), parseFloat(initialLon)), // Unity에서 받은 초기 위치 사용
-            container: "map_canvas", // 컨테이너 ID도 map_canvas로 통일
-            zoom: parseInt(initialZoom) // Unity에서 받은 초기 줌 레벨 사용
+            // ★★★ Unity에서 전달받은 위도(initialLat)와 경도(initialLon)를 지도의 중심에 사용 ★★★
+            center: new inavi.maps.LatLng(parseFloat(initialLat), parseFloat(initialLon)),
+            container: "map_canvas", // 지도 컨테이너 ID
+            zoom: parseInt(initialZoom) // Unity에서 전달받은 초기 줌 레벨 사용
         });
 
         // 지도가 초기화 완료되면 Unity로 메시지 전송
+        // `map.on("init", ...)` 이벤트는 아이나비 지도 객체가 완전히 초기화되었을 때 발생합니다.
         map.on("init", function() {
             console.log("map.html: 아이나비 지도 객체 초기화 완료! 'init' 이벤트 발생.");
+            // Unity로 초기화 완료 메시지 전송 (UniWebView의 sendMessage 함수 사용)
             uniwebview.sendMessage("MapInitialized?data=Map_is_ready");
-            
-            // 지도 초기화와 함께 사용자 위치 마커도 초기 위치에 표시 (옵션)
-            updateUserLocation(initialLat, initialLon, "초기위치");
         });
 
+        // 지도 초기화 중 오류 발생 시 Unity로 메시지 전송
         map.on("error", function(e) {
             console.error("map.html: 아이나비 지도 초기화 오류 발생:", e);
+            // Unity로 오류 메시지 전송 (UniWebView의 sendMessage 함수 사용)
             uniwebview.sendMessage("MapError?data=" + (e.message || "Unknown map error"));
         });
     }
 
-    // ★★★ 지도 중심 이동 함수 ★★★
-    // Unity에서 MapWebViewManager.MoveMapCenter()를 통해 호출될 함수입니다.
-    function moveMapCenter(lat, lon) {
-        if (map) {
-            var latlng = new inavi.maps.LatLng(parseFloat(lat), parseFloat(lon));
-            map.setCenter(latlng);
-            console.log("map.html: 지도 중심 이동됨:", lat, lon);
-        } else {
-            console.warn("map.html: 지도 객체가 초기화되지 않아 중심 이동 불가.");
-        }
-    }
+    // ★★★ 기타 불필요한 JavaScript 함수는 모두 제거되었습니다. ★★★
 
-    // ★★★ 줌 레벨 변경 함수 ★★★
-    // Unity에서 MapWebViewManager.SetMapZoomLevel()을 통해 호출될 함수입니다.
-    function setMapZoomLevel(zoom) {
-        if (map) {
-            map.setZoom(parseInt(zoom));
-            console.log("map.html: 지도 줌 레벨 변경됨:", zoom);
-        } else {
-            console.warn("map.html: 지도 객체가 초기화되지 않아 줌 레벨 변경 불가.");
-        }
-    }
-
-    // ★★★ 사용자의 현재 위치를 지도상에 표시하고 업데이트하는 함수 ★★★
-    // Unity에서 MapWebViewManager.UpdateUserLocationMarker()를 통해 호출될 함수입니다.
-    function updateUserLocation(lat, lon, accuracy) {
-        if (!map) {
-            console.warn("map.html: 지도 객체가 초기화되지 않아 사용자 위치 마커 업데이트 불가.");
-            return;
-        }
-
-        var latlng = new inavi.maps.LatLng(parseFloat(lat), parseFloat(lon));
-
-        if (userLocationMarker) {
-            userLocationMarker.setPosition(latlng);
-            console.log("map.html: 사용자 위치 마커 업데이트: " + lat + ", " + lon);
-        } else {
-            var markerOptions = {
-                position: latlng,
-                map: map,
-                icon: { // 사용자 위치를 나타내는 아이콘 커스터마이징 (선택 사항, 아이나비 문서 참고)
-                    // 기본 아이콘 사용하려면 이 블록을 주석 처리하거나 제거
-                    url: 'https://img.icons8.com/color/48/000000/google-maps-new.png', // 예시 이미지 (구글 맵스 마커 아이콘)
-                    size: new inavi.maps.Size(32, 32),
-                    anchor: new inavi.maps.Point(16, 32) // 아이콘의 핀 위치 조정 (하단 중앙)
-                },
-                title: "현재 위치",
-                zIndex: 100 // 다른 마커들 위에 표시
-            };
-            userLocationMarker = new inavi.maps.Marker(markerOptions);
-            console.log("map.html: 사용자 위치 마커 생성: " + lat + ", " + lon + ", 정확도: " + accuracy);
-        }
-    }
-
-    // 기타 UniWebView와의 통신 함수 (UniWebView의 docs.uniwebview.com/guide/using-javascript.html 참고)
-    // UniWebView에서 JavaScript 함수 호출 시 사용할 것입니다.
-    // window.onload 함수는 이제 initializeMap을 직접 호출하지 않고,
-    // UniWebView에서 sendMessage를 통해 MapHtmlLoaded 메시지를 받고
-    // OnPageFinished에서 initializeMap을 호출하므로 불필요합니다.
   </script>
 
   <!-- 아이나비 지도 SDK 로드 -->
-  <!-- callback=initMap 은 위 자바스크립트의 initMap() 함수를 자동으로 호출합니다. -->
   <script src="https://imaps.inavi.com/maps/v3.0/appkeys/9fa813c10de1d52637c4fb13cc8d566fd99f468c/maps?callback=initMap"></script>
 </body>
 </html>
