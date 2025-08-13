@@ -11,33 +11,17 @@
 <body>
   <div id="map"></div>
 
-  <script>
-    function initMap() {
-      if (!window.inavi || !inavi.maps) {
-        console.error('SDK 미로드: inavi 네임스페이스가 없습니다.');
-        return;
-      }
-      const center = { lat: 37.4021, lng: 127.1087 };
-      new inavi.maps.Map(document.getElementById('map'), {
-        center,
-        zoom: 15,
-        zoomControl: true,
-        gestureHandling: 'greedy'
-      });
-    }
-
-    (function loadInaviSdk(){
-      const s = document.createElement('script');
-      // 앱 키를 실제 값으로 교체하세요. 필요한 libraries는 문서에 맞게 추가(예: services 등).
-      const base = 'https://mapsapi.inavisys.com/sdk/js';
-      const qs = 'appKey=9fa813c10de1d52637c4fb13cc8d566fd99f468c&libraries=services&_t=' + Date.now(); // 캐시 버스터
-      s.src = base + '?' + qs;
-      s.async = true;
-      s.onload = initMap;
-      s.onerror = () => console.error('SDK 로드 실패. URL/도메인 허용/네트워크를 확인하세요.');
-      document.head.appendChild(s);
-    })();
-  </script>
+    <script>
+        function initMap() {
+            const map = new inavi.maps.Map({
+                center: [127.110749, 37.402158], 
+                container: "map", 
+                zoom: 13 
+            });
+        }
+    </script>
+   <script src="https://imaps.inavi.com/maps/v3.0/appkeys/9fa813c10de1d52637c4fb13cc8d566fd99f468c/maps?callback=initMap"></script>
 </body>
 
 </html>
+
